@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 
         if (contentType.includes("application/vnd.apple.mpegurl") || contentType.includes("application/x-mpegURL")) {
             const playlistText = await response.text();
-            const baseUrl = response.url; // Use the final response URL as the base
+            const baseUrl = response.url;
 
             const rewrittenLines = playlistText.split("\n").map(line => {
                 const trimmedLine = line.trim();
@@ -31,7 +31,8 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
                     return line;
                 }
                 const absoluteUrl = new URL(trimmedLine, baseUrl).href;
-                return `http://localhost:5173/api/stream?video=${encodeURIComponent(absoluteUrl)}`;
+
+                return `${url.origin}/api/stream?video=${encodeURIComponent(absoluteUrl)}`;
             });
 
             const rewrittenPlaylist = rewrittenLines.join("\n");
