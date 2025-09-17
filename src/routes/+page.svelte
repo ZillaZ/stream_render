@@ -1,32 +1,34 @@
 <script lang="ts">
- import { page } from "$app/state";
- import Hls from "hls.js";
+ import { page } from '$app/state';
+ import Hls from 'hls.js';
 
- const params = page.url.searchParams
- const raw_url = params.get("url")
- const src = raw_url ? decodeURI(raw_url) : null
- const hls = new Hls()
- hls.on(Hls.Events.ERROR, e => {
-     console.error(e)
- })
+ const raw_url = page.url.searchParams.get('url');
 
- let video_component : HTMLVideoElement | undefined = $state()
+ const video_source_url = raw_url
+                        ? `/api/stream?video=${encodeURIComponent(raw_url)}`
+                        : null;
 
- let video_url = $derived.by(async () => {
-     if(!raw_url || !src) return ""
-     let url = `http://localhost:5173/api/stream?protocol=m3u8&video=${encodeURIComponent(raw_url)}`
-     if (Hls.isSupported() && video_component) {
-         hls.loadSource(url);
-         hls.attachMedia(video_component);
-     } else if (video_component?.canPlayType("application/vnd.apple.mpegurl")) {
-         video_component.src = url;
+ const hls = new Hls();
+ hls.on(Hls.Events.ERROR, (event, data) => {
+     if (data.fatal) {
+         console.error('HLS Fatal Error:', data);
+     } else {
+         console.warn('HLS Non-Fatal Error:', data);
      }
-     return url
- })
- $inspect(video_url)
+ });
+
+ let video_component: HTMLVideoElement | undefined = $state();
+
+ $effect(() => {
+     if (video_source_url && video_component && Hls.isSupported()) {
+         console.log('Attaching HLS source:', video_source_url);
+         hls.loadSource(video_source_url);
+         hls.attachMedia(video_component);
+     }
+ });
 </script>
 
-{#if src}
+{#if video_source_url}
     <video
         id="my-video"
         class="video-js"
@@ -36,5 +38,8 @@
         height="264"
         bind:this={video_component}
     >
+        <source src={video_source_url} type="application/vnd.apple.mpegurl" />
     </video>
+{:else}
+    <p>No video URL provided.</p>
 {/if}
